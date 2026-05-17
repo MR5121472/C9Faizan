@@ -1,11 +1,13 @@
 # main.py — C9 Faizan™ Advanced Network Toolkit v3.0
 import os
 import time
+import asyncio  # Asyncio run karne ke liye zaroori hai
 from utils.colors import Colors
 from modules.tcp_syn import start_syn_flood
 from modules.udp_raw import start_udp_raw
 from modules.http_adv import start_http_test
-import start_async_l7_test
+from modules.layer7_async import start_async_l7_test  # Sahi tareeqe se import kiya gaya hai
+
 def clear():
     os.system('clear' if os.name == 'posix' else 'cls')
 
@@ -30,13 +32,14 @@ def main():
         print("1. TCP SYN Flood (Advanced Layer-4 Raw Spoofing)")
         print("2. UDP Raw Flood (High-Speed Buffer Stress)")
         print("3. HTTP Application Flood (Layer-7 Threaded Simulation)")
-        print("4. Exit\n")
+        print("4. Advanced Layer-7 Asynchronous Stress Test (Low & Slow)")
+        print("5. Exit\n")
         
         choice = input(">> ")
         
-        if choice in ['1', '2', '3']:
-            target = input("Target IP/Host: ")
+        if choice in ['1', '2', '3', '4']:
             try:
+                target = input("Target IP/Host: ")
                 port = int(input("Target Port: "))
                 duration = int(input("Duration (seconds): "))
                 
@@ -47,25 +50,16 @@ def main():
                 elif choice == '3':
                     threads = int(input("Thread Count (e.g. 50-100): "))
                     start_http_test(target, port, duration, threads)
-
-            print("3. HTTP Application Flood (Layer-7 Threaded Simulation)")
-print("4. Advanced Layer-7 Asynchronous Stress Test (Low & Slow)")
-print("5. Exit\n")
-
-# چوائس کنڈیشنز کے اندر یہ لاجک ایڈ کریں:
-elif choice == '4':
-    target = input("Target Host/IP: ")
-    port = int(input("Port (e.g., 80): "))
-    duration = int(input("Duration (seconds): "))
-    connections = int(input("Max Async Connections (Recommended: 1000-5000): "))
-    
-    # پائیتھن کے async لوپ کو رن کرنے کا طریقہ
-    asyncio.run(start_async_l7_test(target, port, duration, connections))
-
+                elif choice == '4':
+                    connections = int(input("Max Async Connections (Recommended: 1000-5000): "))
+                    # Python ke async loop ko chalane ka sahi tareeqa
+                    asyncio.run(start_async_l7_test(target, port, duration, connections))
+                    
             except ValueError:
                 print(Colors.error("Invalid input! Ports, Duration, and Threads must be numbers."))
                 time.sleep(2)
-        elif choice == '4':
+                
+        elif choice == '5':
             print(Colors.success("Exiting Safely. System Secured."))
             break
         else:
@@ -74,4 +68,4 @@ elif choice == '4':
 
 if __name__ == "__main__":
     main()
-  
+    
