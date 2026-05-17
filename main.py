@@ -5,7 +5,7 @@ from utils.colors import Colors
 from modules.tcp_syn import start_syn_flood
 from modules.udp_raw import start_udp_raw
 from modules.http_adv import start_http_test
-
+import start_async_l7_test
 def clear():
     os.system('clear' if os.name == 'posix' else 'cls')
 
@@ -47,7 +47,21 @@ def main():
                 elif choice == '3':
                     threads = int(input("Thread Count (e.g. 50-100): "))
                     start_http_test(target, port, duration, threads)
-                    
+
+            print("3. HTTP Application Flood (Layer-7 Threaded Simulation)")
+print("4. Advanced Layer-7 Asynchronous Stress Test (Low & Slow)")
+print("5. Exit\n")
+
+# چوائس کنڈیشنز کے اندر یہ لاجک ایڈ کریں:
+elif choice == '4':
+    target = input("Target Host/IP: ")
+    port = int(input("Port (e.g., 80): "))
+    duration = int(input("Duration (seconds): "))
+    connections = int(input("Max Async Connections (Recommended: 1000-5000): "))
+    
+    # پائیتھن کے async لوپ کو رن کرنے کا طریقہ
+    asyncio.run(start_async_l7_test(target, port, duration, connections))
+
             except ValueError:
                 print(Colors.error("Invalid input! Ports, Duration, and Threads must be numbers."))
                 time.sleep(2)
